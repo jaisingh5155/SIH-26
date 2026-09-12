@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { CelebrationAnimation } from "../components/CelebrationAnimation";
 import { GameResults } from "../components/GameResults";
 import { useGameSession } from "../hooks/useGameSession";
+import { useAdaptiveDifficulty } from "../hooks/useAdaptiveDifficulty";
+import { AdaptivePacingBadge } from "../components/AdaptivePacingBadge";
 
 // Same implementation as WordScramble but with a larger, harder word pool
 const ANAGRAM_WORDS = [
@@ -89,27 +91,39 @@ const getPool = (level: number) => {
   return ANAGRAM_WORDS.filter((w) => w.length >= 6);
 };
 
-export default function AnagramSolver({ level }: { level: number }) {
-  const pool = getPool(level);
+export default function AnagramSolver({ level: initialLevel }: { level: number }) {
+  const dda = useAdaptiveDifficulty({
+    initialLevel,
+    maxLevel: 10,
+    minLevel: 1,
+    targetSeconds: 15,
+    gameId: "anagram-solver",
+  });
+  const activeLevel = dda.level;
+
+  const pool = getPool(activeLevel);
   const [word, setWord] = useState(() => pool[Math.floor(Math.random() * pool.length)] || "cat");
   const [scr, setScr] = useState(() => scramble(word));
   const [input, setInput] = useState("");
   const [score, setScore] = useState(0);
-  const [feedback, setFeedback] = useState("");
+  const [feedback, setFeedback] = useState<{ text: string; isCorrect: boolean } | null>(null);
   const [completed, setCompleted] = useState(false);
   const [synced, setSynced] = useState(false);
   const [offline, setOffline] = useState(false);
   const saved = useRef(false);
   const sessionStart = useRef(Date.now());
-  const target = Math.max(3, Math.ceil(level / 2));
+  const trialStart = useRef(Date.now());
+  const target = Math.max(3, Math.ceil(activeLevel / 2));
   const { submitResult } = useGameSession();
 
-  const pick = () => {
-    const w = pool[Math.floor(Math.random() * pool.length)]!;
+  const pick = (lvl = dda.level) => {
+    const list = getPool(lvl);
+    const w = list[Math.floor(Math.random() * list.length)] ?? "cat";
     setWord(w);
     setScr(scramble(w));
     setInput("");
-    setFeedback("");
+    setFeedback(null);
+    trialStart.current = Date.now();
   };
 
   useEffect(() => {
@@ -119,39 +133,50 @@ export default function AnagramSolver({ level }: { level: number }) {
     setOffline(false);
     saved.current = false;
     sessionStart.current = Date.now();
-    pick();
-  }, [level]);
+    pick(propLevel);
+  }, [propLevel]);
 
   const submit = () => {
     if (completed) return;
-    if (input.toLowerCase() === word.toLowerCase()) {
+    const trialDuration = Math.max(1, (Date.now() - trialStart.current) / 1000);
+    if (input.trim().toLowerCase() === word.toLowerCase()) {
+      dda.recordTrial(true, trialDuration);
       const newScore = score + 1;
       setScore(newScore);
-      setFeedback("✓ Correct!");
+      setFeedback({ text: `✓ Right! "${word.toUpperCase()}" is correct!`, isCorrect: true });
       if (newScore >= target && !saved.current) {
         saved.current = true;
         const acc = Math.min(100, Math.round((newScore / target) * 100));
         const dur = Math.round((Date.now() - sessionStart.current) / 1000);
-        submitResult({
-          gameId: "anagram-solver",
-          gameType: "anagram_solver",
-          score: acc,
-          accuracy: acc,
-          durationSeconds: Math.max(5, dur),
-          level,
-          difficulty: String(level),
-        }).then((r) => {
-          setSynced(r.success);
-          setOffline(r.offline);
-          setCompleted(true);
-        });
+        setTimeout(() => {
+          submitResult({
+            gameId: "anagram-solver",
+            gameType: "anagram_solver",
+            score: acc,
+            accuracy: acc,
+            durationSeconds: Math.max(5, dur),
+            level: activeLevel,
+            difficulty: String(activeLevel),
+          }).then((r) => {
+            setSynced(r.success);
+            setOffline(r.offline);
+            setCompleted(true);
+          });
+        }, 600);
       } else {
-        setTimeout(pick, 700);
+        setTimeout(() => pick(dda.level), 700);
       }
     } else {
-      setFeedback("✗ Wrong — the answer was: " + word);
-      setTimeout(pick, 1200);
+      dda.recordTrial(false, trialDuration);
+      setFeedback({ text: "✗ Not quite — try another word combination!", isCorrect: false });
+      setTimeout(() => setFeedback(null), 1200);
     }
+  };
+
+  const skip = () => {
+    dda.recordTrial(false, 15);
+    setFeedback({ text: `Skipped! The word was "${word.toUpperCase()}"`, isCorrect: false });
+    setTimeout(() => pick(dda.level), 900);
   };
 
   if (completed)
@@ -162,7 +187,7 @@ export default function AnagramSolver({ level }: { level: number }) {
           score={Math.min(100, Math.round((score / target) * 100))}
           accuracy={Math.min(100, Math.round((score / target) * 100))}
           durationSeconds={Math.round((Date.now() - sessionStart.current) / 1000)}
-          level={level}
+          level={activeLevel}
           gameName="Anagram Solver"
           synced={synced}
           offline={offline}
@@ -173,7 +198,7 @@ export default function AnagramSolver({ level }: { level: number }) {
             setSynced(false);
             setOffline(false);
             sessionStart.current = Date.now();
-            pick();
+            pick(dda.level);
           }}
         />
       </>
@@ -181,10 +206,30 @@ export default function AnagramSolver({ level }: { level: number }) {
 
   return (
     <div className="space-y-6 text-center">
-      <p className="text-cream/50 text-xs uppercase font-bold">
-        Score: {score}/{target}
-      </p>
-      <p className="text-cream/60 text-sm">Unscramble these letters to form a real word:</p>
+      <div className="flex flex-wrap items-center justify-between gap-3 px-2 pb-3 border-b border-clay/40">
+        <AdaptivePacingBadge
+          isAdaptiveActive={dda.isAdaptiveActive}
+          onToggle={dda.toggleAdaptive}
+          adjustment={dda.adjustment}
+        />
+
+        <div className="flex items-center gap-3">
+          <span className="px-2.5 py-1 rounded-full border border-sun/40 bg-sun/10 text-sun font-bold text-xs sm:text-sm">
+            Level {activeLevel}
+          </span>
+          <p className="text-cream/70 text-xs sm:text-sm font-bold">
+            Score: <span className="text-sun font-extrabold text-base">{score}</span> / {target}
+          </p>
+        </div>
+      </div>
+
+      {dda.showAssistanceCue && (
+        <div className="p-3 rounded-xl bg-sun/15 border border-sun/40 text-sun text-sm font-semibold animate-pulse flex items-center justify-center gap-2">
+          <span>💡 Gentle Hint:</span> Starts with <strong>"{word[0]?.toUpperCase()}"</strong> ({word.length} letters)
+        </div>
+      )}
+
+      <p className="text-cream/70 text-sm">Unscramble these letters to form a real word:</p>
       <div className="flex justify-center gap-2 flex-wrap">
         {scr
           .toUpperCase()
@@ -192,7 +237,7 @@ export default function AnagramSolver({ level }: { level: number }) {
           .map((letter, i) => (
             <span
               key={i}
-              className="flex w-12 h-12 items-center justify-center rounded-xl border-2 border-sun bg-sun/10 font-display text-2xl font-black text-sun"
+              className="flex w-12 h-12 items-center justify-center rounded-xl border-2 border-sun bg-sun/10 font-display text-2xl font-black text-sun shadow-md"
             >
               {letter}
             </span>
@@ -215,21 +260,28 @@ export default function AnagramSolver({ level }: { level: number }) {
         <button
           onClick={submit}
           disabled={completed}
-          className="px-6 py-3 rounded-xl bg-sun text-ink font-extrabold hover:opacity-90 disabled:opacity-40 transition shadow"
+          className="px-6 py-3 rounded-xl bg-sun text-ink font-extrabold hover:opacity-90 disabled:opacity-40 transition shadow text-lg"
         >
           Submit
         </button>
       </div>
+
       {feedback && (
-        <p
-          className={`text-sm font-bold ${feedback.startsWith("✓") ? "text-tea-confirm" : "text-fire"}`}
+        <div
+          className={`py-2 px-4 rounded-xl font-bold text-base max-w-md mx-auto transition-all ${
+            feedback.isCorrect
+              ? "bg-tea-confirm/20 border-2 border-tea-confirm text-tea-confirm"
+              : "bg-fire/20 border-2 border-fire text-fire"
+          }`}
         >
-          {feedback}
-        </p>
+          {feedback.text}
+        </div>
       )}
-      <button onClick={pick} className="text-xs text-cream/40 underline">
-        Skip
+
+      <button onClick={handleSkip} className="text-xs text-cream/50 hover:text-cream underline transition">
+        Skip word (Show answer)
       </button>
     </div>
   );
 }
+

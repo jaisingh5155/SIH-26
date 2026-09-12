@@ -5,7 +5,9 @@ import { NavigationHeader } from "@/components/navigation-header";
 import { Button } from "@/components/ui/button";
 import { HowToPlay } from "./HowToPlay";
 import { LevelSelector } from "./LevelSelector";
+import { AdaptivePacingBadge } from "./AdaptivePacingBadge";
 import type { GameMetadata } from "../types/game.types";
+import type { DdaAdjustment } from "../hooks/useAdaptiveDifficulty";
 import { GAME_INSTRUCTIONS } from "../data/gameInstructions";
 
 interface GameShellProps {
@@ -14,6 +16,9 @@ interface GameShellProps {
   /** Current level (1-based) */
   level: number;
   showLevelSelector?: boolean;
+  isAdaptive?: boolean;
+  onToggleAdaptive?: () => void;
+  adjustment?: DdaAdjustment | null;
 }
 
 /**
@@ -22,11 +27,19 @@ interface GameShellProps {
  *  - SIH NavigationHeader
  *  - Back to Games hub button
  *  - Game title + icon
- *  - Optional level selector
+ *  - Adaptive AI DDA Pacing Badge + Level selector
  *  - Collapsible HowToPlay instructions
  *  - The game content area (children)
  */
-export function GameShell({ game, children, level, showLevelSelector = true }: GameShellProps) {
+export function GameShell({
+  game,
+  children,
+  level,
+  showLevelSelector = true,
+  isAdaptive,
+  onToggleAdaptive,
+  adjustment,
+}: GameShellProps) {
   const instructions = GAME_INSTRUCTIONS[game.id];
 
   return (
@@ -42,7 +55,24 @@ export function GameShell({ game, children, level, showLevelSelector = true }: G
             </Link>
           </Button>
 
-          {showLevelSelector && <LevelSelector gameId={game.id} maxLevel={game.maxLevel} />}
+          <div className="flex flex-wrap items-center gap-3">
+            {onToggleAdaptive && (
+              <AdaptivePacingBadge
+                isAdaptiveActive={isAdaptive ?? true}
+                onToggle={onToggleAdaptive}
+                adjustment={adjustment}
+              />
+            )}
+
+            {showLevelSelector && (
+              <LevelSelector
+                gameId={game.id}
+                maxLevel={game.maxLevel}
+                isAdaptive={isAdaptive}
+                onToggleAdaptive={onToggleAdaptive}
+              />
+            )}
+          </div>
         </div>
 
         {/* Game Header */}

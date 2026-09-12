@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { CelebrationAnimation } from "../components/CelebrationAnimation";
 import { GameResults } from "../components/GameResults";
 import { useGameSession } from "../hooks/useGameSession";
+import { useAdaptiveDifficulty } from "../hooks/useAdaptiveDifficulty";
+import { AdaptivePacingBadge } from "../components/AdaptivePacingBadge";
 
 type Problem = { text: string; answer: number };
 
@@ -12,14 +14,23 @@ const generateProblem = (level: number): Problem => {
   if (level <= 3)
     return Math.random() > 0.5
       ? { text: `${a} + ${b}`, answer: a + b }
-      : { text: `${a} - ${b}`, answer: a - b };
-  if (level <= 7) return { text: `${a} × ${b}`, answer: a * b };
+      : { text: `${Math.max(a, b)} - ${Math.min(a, b)}`, answer: Math.max(a, b) - Math.min(a, b) };
+  if (level <= 7) return { text: `${Math.min(a, 6)} × ${Math.min(b, 5)}`, answer: Math.min(a, 6) * Math.min(b, 5) };
   if (level === 8) return { text: `(${a} + ${b}) × 2`, answer: (a + b) * 2 };
   return { text: `${a} × ${b}`, answer: a * b };
 };
 
-export default function QuickMath({ level }: { level: number }) {
-  const [problem, setProblem] = useState<Problem>(() => generateProblem(level));
+export default function QuickMath({ level: propLevel }: { level: number }) {
+  const dda = useAdaptiveDifficulty({
+    initialLevel: propLevel,
+    maxLevel: 10,
+    minLevel: 1,
+    targetSeconds: 15,
+    gameId: "quick-math",
+  });
+  const activeLevel = dda.level;
+
+  const [problem, setProblem] = useState<Problem>(() => generateProblem(activeLevel));
   const [input, setInput] = useState("");
   const [score, setScore] = useState(0);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -28,11 +39,12 @@ export default function QuickMath({ level }: { level: number }) {
   const [offline, setOffline] = useState(false);
   const saved = useRef(false);
   const sessionStart = useRef(Date.now());
-  const target = Math.max(3, Math.ceil(level / 2));
+  const trialStartTime = useRef(Date.now());
+  const target = Math.max(3, Math.ceil(activeLevel / 2));
   const { submitResult } = useGameSession();
 
   useEffect(() => {
-    setProblem(generateProblem(level));
+    setProblem(generateProblem(propLevel));
     setInput("");
     setScore(0);
     setCompleted(false);
@@ -40,15 +52,19 @@ export default function QuickMath({ level }: { level: number }) {
     setOffline(false);
     saved.current = false;
     sessionStart.current = Date.now();
-  }, [level]);
+    trialStartTime.current = Date.now();
+  }, [propLevel]);
 
   const submit = () => {
     const val = parseInt(input, 10);
+    const trialSecs = Math.round((Date.now() - trialStartTime.current) / 1000);
+
     if (isNaN(val)) {
       setFeedback("Enter a number");
       return;
     }
     if (val === problem.answer) {
+      dda.recordTrial(true, trialSecs);
       const newScore = score + 1;
       setScore(newScore);
       setFeedback("✓ Correct!");
@@ -62,8 +78,8 @@ export default function QuickMath({ level }: { level: number }) {
           score: acc,
           accuracy: acc,
           durationSeconds: Math.max(5, dur),
-          level,
-          difficulty: String(level),
+          level: activeLevel,
+          difficulty: String(activeLevel),
         }).then((r) => {
           setSynced(r.success);
           setOffline(r.offline);
@@ -71,17 +87,20 @@ export default function QuickMath({ level }: { level: number }) {
         });
       } else {
         setTimeout(() => {
-          setProblem(generateProblem(level));
+          setProblem(generateProblem(dda.level));
           setInput("");
           setFeedback(null);
+          trialStartTime.current = Date.now();
         }, 700);
       }
     } else {
+      dda.recordTrial(false, trialSecs);
       setFeedback(`✗ Answer was ${problem.answer}`);
       setTimeout(() => {
-        setProblem(generateProblem(level));
+        setProblem(generateProblem(dda.level));
         setInput("");
         setFeedback(null);
+        trialStartTime.current = Date.now();
       }, 1200);
     }
   };
@@ -94,7 +113,7 @@ export default function QuickMath({ level }: { level: number }) {
           score={Math.min(100, Math.round((score / target) * 100))}
           accuracy={Math.min(100, Math.round((score / target) * 100))}
           durationSeconds={Math.round((Date.now() - sessionStart.current) / 1000)}
-          level={level}
+          level={activeLevel}
           gameName="Quick Math"
           synced={synced}
           offline={offline}
@@ -104,9 +123,10 @@ export default function QuickMath({ level }: { level: number }) {
             saved.current = false;
             setSynced(false);
             setOffline(false);
-            setProblem(generateProblem(level));
-            setInput("");
             sessionStart.current = Date.now();
+            setProblem(generateProblem(dda.level));
+            setInput("");
+            trialStartTime.current = Date.now();
           }}
         />
       </>
@@ -114,10 +134,32 @@ export default function QuickMath({ level }: { level: number }) {
 
   return (
     <div className="space-y-6 text-center">
+      {/* Top Controls: Adaptive Pacing Badge + Level & Score */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-clay/40 text-left">
+        <AdaptivePacingBadge
+          isAdaptiveActive={dda.isAdaptiveActive}
+          onToggle={dda.toggleAdaptive}
+          adjustment={dda.adjustment}
+        />
+
+        <div className="flex items-center gap-3">
+          <span className="px-2.5 py-1 rounded-full border border-sun/40 bg-sun/10 text-sun font-bold text-xs sm:text-sm">
+            Level {activeLevel}
+          </span>
+          <p className="text-cream/70 text-xs sm:text-sm font-bold">
+            Score: <span className="text-sun text-base font-black">{score}</span> / {target}
+          </p>
+        </div>
+      </div>
+
+      {/* Gentle Assistance Cue */}
+      {dda.showAssistanceCue && (
+        <div className="px-4 py-2 rounded-xl bg-sun/10 border border-sun/40 text-sun text-xs font-bold text-center animate-pulse">
+          💡 Adaptive Assistance: Break down the numbers step-by-step. Take your time!
+        </div>
+      )}
+
       <div>
-        <p className="text-cream/50 text-xs uppercase font-bold mb-2">
-          Score: {score}/{target}
-        </p>
         <div className="mx-auto inline-block rounded-2xl border-4 border-sun bg-ink px-10 py-6 shadow-card">
           <span className="font-display text-5xl sm:text-6xl font-black text-sun">
             {problem.text} = ?

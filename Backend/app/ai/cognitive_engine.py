@@ -14,6 +14,52 @@ from app.models.task import Task, TaskStatus
 
 logger = logging.getLogger("cognitive_engine")
 
+# Clinical Cognitive Domain Mappings across all 22 active game types
+# Includes backward-compatibility for any legacy string keys
+MEMORY_GAMES = {
+    "card_matching",
+    "n_back",
+    "pattern_matrix",
+    "simon_says",
+    "working_memory_grid",
+    "delayed_recall",
+    # Legacy alias support
+    "memory_match",
+    "word_recall",
+}
+
+ATTENTION_GAMES = {
+    "schulte_table",
+    "visual_search",
+    "reaction_time",
+    # Legacy alias support
+    "pattern_sequence",
+}
+
+EXECUTIVE_GAMES = {
+    "stroop",
+    "quick_math",
+    "dual_task",
+    "trail_making",
+    "water_jugs",
+    "tower_of_hanoi",
+    "ball_sort",
+    "logic_puzzles",
+    "mental_rotation",
+    "maze",
+    "number_sequence",
+    # Legacy alias support
+    "math_challenge",
+    "stroop_color",
+}
+
+LANGUAGE_GAMES = {
+    "word_scramble",
+    "anagram_solver",
+    # Legacy alias support
+    "word_recall",
+}
+
 
 class CognitiveEngine:
     def __init__(self):
@@ -27,9 +73,13 @@ class CognitiveEngine:
                 # If custom scikit-learn / joblib model exists, load it
                 logger.info(f"Checking for ML model weights at {model_path}")
             except Exception as e:
-                logger.warning(f"Could not load ML model from {model_path}: {e}. Using clinical heuristic engine.")
+                logger.warning(
+                    f"Could not load ML model from {model_path}: {e}. Using clinical heuristic engine."
+                )
         else:
-            logger.info(f"No custom ML model file found at {model_path}. Using resilient clinical heuristic engine.")
+            logger.info(
+                f"No custom ML model file found at {model_path}. Using resilient clinical heuristic engine."
+            )
 
     def evaluate_cognition(
         self,
@@ -38,17 +88,19 @@ class CognitiveEngine:
     ) -> dict[str, Any]:
         """
         Calculates a comprehensive cognitive profile for the patient based on
-        game scores, medication adherence, and task completions over the last 30 days.
+        all 22 cognitive training games, medication adherence, and task completions
+        over the last 30 days.
         """
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=30)
 
-        # 1. Fetch game sessions
+        # 1. Fetch game sessions for this patient in the evaluation window
         games = db.scalars(
             select(GameSession)
             .where(
                 GameSession.patient_id == patient_id,
                 GameSession.completed_at >= cutoff_date,
             )
+            .order_by(GameSession.completed_at.desc())
         ).all()
 
         # 2. Fetch medication logs for adherence calculation
@@ -69,11 +121,23 @@ class CognitiveEngine:
             )
         ).all()
 
-        # Calculate domain performance
-        memory_scores = [g.accuracy for g in games if g.game_type in ("memory_match", "word_recall")]
-        attention_scores = [g.accuracy for g in games if g.game_type in ("pattern_sequence", "stroop_color")]
-        executive_scores = [g.accuracy for g in games if g.game_type in ("math_challenge", "stroop_color")]
-        language_scores = [g.accuracy for g in games if g.game_type == "word_recall"]
+        # Extract accuracy scores from real game sessions by domain
+        memory_scores = [
+            g.accuracy for g in games
+            if g.game_type in MEMORY_GAMES and g.accuracy is not None
+        ]
+        attention_scores = [
+            g.accuracy for g in games
+            if g.game_type in ATTENTION_GAMES and g.accuracy is not None
+        ]
+        executive_scores = [
+            g.accuracy for g in games
+            if g.game_type in EXECUTIVE_GAMES and g.accuracy is not None
+        ]
+        language_scores = [
+            g.accuracy for g in games
+            if g.game_type in LANGUAGE_GAMES and g.accuracy is not None
+        ]
 
         # Adherence calculations
         total_meds = len(med_logs)
@@ -84,11 +148,24 @@ class CognitiveEngine:
         completed_tasks = sum(1 for t in tasks if t.status == TaskStatus.COMPLETED)
         task_adherence = (completed_tasks / total_tasks * 100.0) if total_tasks > 0 else 85.0
 
-        # Base scores (default to neutral baseline 75.0 if no games played yet)
-        avg_mem = sum(memory_scores) / len(memory_scores) if memory_scores else (med_adherence * 0.8 + 15.0)
-        avg_att = sum(attention_scores) / len(attention_scores) if attention_scores else (task_adherence * 0.8 + 15.0)
-        avg_exec = sum(executive_scores) / len(executive_scores) if executive_scores else 75.0
-        avg_lang = sum(language_scores) / len(language_scores) if language_scores else 75.0
+        # Base scores: prioritize actual played games, with sensible clinical baseline
+        # if a specific domain hasn't been tested yet
+        def compute_domain_score(scores: list[float], fallback_base: float) -> float:
+            if not scores:
+                return fallback_base
+            # Give recent 5 sessions 60% weight, older sessions 40% weight
+            if len(scores) >= 3:
+                recent = scores[:3]
+                older = scores[3:]
+                recent_avg = sum(recent) / len(recent)
+                older_avg = sum(older) / len(older) if older else recent_avg
+                return recent_avg * 0.65 + older_avg * 0.35
+            return sum(scores) / len(scores)
+
+        avg_mem = compute_domain_score(memory_scores, (med_adherence * 0.5 + 40.0))
+        avg_att = compute_domain_score(attention_scores, (task_adherence * 0.5 + 40.0))
+        avg_exec = compute_domain_score(executive_scores, 78.0)
+        avg_lang = compute_domain_score(language_scores, 82.0)
 
         # Bound scores between 0 and 100
         mem_score = max(0.0, min(100.0, round(avg_mem, 1)))
@@ -96,7 +173,7 @@ class CognitiveEngine:
         exec_score = max(0.0, min(100.0, round(avg_exec, 1)))
         lang_score = max(0.0, min(100.0, round(avg_lang, 1)))
 
-        # Composite overall cognitive score
+        # Composite overall cognitive score (Clinical weighting)
         overall_score = round(
             (mem_score * 0.35)
             + (att_score * 0.25)
@@ -115,28 +192,60 @@ class CognitiveEngine:
         else:
             risk_level = "critical"
 
-        # Formulate insights and recommendations
+        # Formulate tailored clinical insights and recommendations
         insights = []
         recommendations = []
 
-        if mem_score < 65.0:
-            insights.append("Short-term visual and routine recall is below expected baseline.")
-            recommendations.append("Increase daily memory stimulation games and encourage daily journal review.")
-        else:
-            insights.append("Memory retention remains stable within normal variance.")
+        total_sessions = len(games)
+        if total_sessions > 0:
+            insights.append(
+                f"Evaluated {total_sessions} cognitive training sessions across {len(set(g.game_type for g in games))} distinct game types."
+            )
 
-        if att_score < 65.0:
-            insights.append("Attention span and sequence following showed minor decay.")
-            recommendations.append("Engage in focused 10-minute pattern matching exercises twice daily.")
+        if mem_score < 68.0:
+            insights.append(
+                f"Working and delayed recall accuracy is at {mem_score:.0f}%, which is below target baseline."
+            )
+            recommendations.append(
+                "Prioritize daily Card Matching, Pattern Matrix, and Working Memory Grid training."
+            )
+        else:
+            insights.append(f"Memory retention remains strong and stable ({mem_score:.0f}% accuracy).")
+
+        if att_score < 68.0:
+            insights.append(
+                f"Visual scanning and attention response time showed mild slowing ({att_score:.0f}%)."
+            )
+            recommendations.append(
+                "Engage in Schulte Table and Visual Search exercises to reinforce focus and peripheral scanning."
+            )
+        else:
+            insights.append(f"Attention and visual tracking are well maintained ({att_score:.0f}%).")
+
+        if exec_score < 68.0:
+            insights.append(
+                f"Executive planning and inhibitory control scored at {exec_score:.0f}%."
+            )
+            recommendations.append(
+                "Practice Tower of Hanoi, Water Jugs, and Stroop Test for adaptive cognitive flexibility."
+            )
 
         if med_adherence < 80.0:
-            insights.append(f"Medication adherence is at {med_adherence:.0f}%, which may impact cognitive consistency.")
-            recommendations.append("Enable high-priority audio reminders for scheduled medication doses.")
+            insights.append(
+                f"Medication adherence is currently at {med_adherence:.0f}%, which may impact cognitive consistency."
+            )
+            recommendations.append(
+                "Enable high-priority audio reminders and caregiver notifications for scheduled medication doses."
+            )
 
         if risk_level in ("high", "critical"):
-            recommendations.append("Schedule a comprehensive clinical assessment with the attending neurologist.")
+            recommendations.append(
+                "Schedule a clinical evaluation with the attending neurologist or geriatric specialist."
+            )
         else:
-            recommendations.append("Continue regular daily cognitive exercises and maintain physical activity.")
+            recommendations.append(
+                "Continue daily 15-minute adaptive gaming and maintain gentle physical mobility routines."
+            )
 
         return {
             "overall_score": overall_score,
@@ -147,7 +256,7 @@ class CognitiveEngine:
             "language_score": lang_score,
             "insights": insights,
             "recommendations": recommendations,
-            "model_version": "v1.2-hybrid-clinical",
+            "model_version": "v2.0-adaptive-clinical",
             "assessment_date": datetime.now(timezone.utc),
         }
 

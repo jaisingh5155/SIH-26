@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CelebrationAnimation } from "../components/CelebrationAnimation";
 import { GameResults } from "../components/GameResults";
 import { useGameSession } from "../hooks/useGameSession";
+import { useAdaptiveDifficulty } from "../hooks/useAdaptiveDifficulty";
+import { AdaptivePacingBadge } from "../components/AdaptivePacingBadge";
 
 export type CardMatchingProps = { level: number };
 
@@ -31,8 +33,20 @@ const SYMBOLS = [
 ];
 const gridSize = (l: number) => (l <= 2 ? 4 : l <= 5 ? 6 : 8);
 
-export default function CardMatching({ level }: CardMatchingProps) {
-  const size = gridSize(level);
+export default function CardMatching({ level: propLevel }: CardMatchingProps) {
+  const dda = useAdaptiveDifficulty({
+    initialLevel: propLevel,
+    maxLevel: 10,
+    minLevel: 1,
+    targetSeconds: 25,
+    gameId: "card-matching",
+  });
+  const [boardLevel, setBoardLevel] = useState(propLevel);
+  useEffect(() => {
+    setBoardLevel(propLevel);
+  }, [propLevel]);
+
+  const size = gridSize(boardLevel);
   const pairCount = (size * size) / 2;
   const [cards, setCards] = useState<Card[]>([]);
   const [flippedCards, setFlippedCards] = useState<number[]>([]);
@@ -43,11 +57,14 @@ export default function CardMatching({ level }: CardMatchingProps) {
   const [offline, setOffline] = useState(false);
   const saved = useRef(false);
   const startTime = useRef(Date.now());
+  const trialStartTime = useRef(Date.now());
   const endSecs = useRef(0);
   const { submitResult } = useGameSession();
 
-  const initializeGame = useCallback(() => {
-    const symbols = SYMBOLS.slice(0, pairCount);
+  const initializeGame = useCallback((lvl = boardLevel) => {
+    const s = gridSize(lvl);
+    const count = (s * s) / 2;
+    const symbols = SYMBOLS.slice(0, count);
     const shuffled = [...symbols, ...symbols].sort(() => Math.random() - 0.5);
     setCards(shuffled.map((value, id) => ({ id, value, isFlipped: false, isMatched: false })));
     setFlippedCards([]);
@@ -58,11 +75,12 @@ export default function CardMatching({ level }: CardMatchingProps) {
     setOffline(false);
     saved.current = false;
     startTime.current = Date.now();
-  }, [pairCount]);
+    trialStartTime.current = Date.now();
+  }, [boardLevel]);
 
   useEffect(() => {
-    initializeGame();
-  }, [initializeGame]);
+    initializeGame(boardLevel);
+  }, [boardLevel, initializeGame]);
 
   const handleCardClick = (id: number) => {
     if (flippedCards.length === 2 || cards[id]?.isFlipped || cards[id]?.isMatched) return;
@@ -73,7 +91,13 @@ export default function CardMatching({ level }: CardMatchingProps) {
     if (newFlipped.length === 2) {
       setMoves((m) => m + 1);
       const [first, second] = newFlipped as [number, number];
+      const trialDuration = Math.round((Date.now() - trialStartTime.current) / 1000);
+
       if (cards[first]?.value === cards[second]?.value) {
+        // Record successful trial for DDA
+        dda.recordTrial(true, trialDuration);
+        trialStartTime.current = Date.now();
+
         setTimeout(() => {
           setCards((prev) =>
             prev.map((c) => (c.id === first || c.id === second ? { ...c, isMatched: true } : c)),
@@ -97,8 +121,8 @@ export default function CardMatching({ level }: CardMatchingProps) {
                 score: Math.min(100, scoreVal),
                 accuracy: acc,
                 durationSeconds: Math.max(5, endSecs.current),
-                level,
-                difficulty: String(level),
+                level: boardLevel,
+                difficulty: String(boardLevel),
               }).then((r) => {
                 setSynced(r.success);
                 setOffline(r.offline);
@@ -110,6 +134,10 @@ export default function CardMatching({ level }: CardMatchingProps) {
           setFlippedCards([]);
         }, 500);
       } else {
+        // Record missed attempt for DDA
+        dda.recordTrial(false, trialDuration);
+        trialStartTime.current = Date.now();
+
         setTimeout(() => {
           setCards((prev) =>
             prev.map((c) => (c.id === first || c.id === second ? { ...c, isFlipped: false } : c)),
@@ -128,28 +156,52 @@ export default function CardMatching({ level }: CardMatchingProps) {
           score={Math.min(100, Math.round((pairCount / Math.max(pairCount, moves)) * 100))}
           accuracy={Math.min(100, Math.round((pairCount / Math.max(pairCount, moves)) * 100))}
           durationSeconds={endSecs.current}
-          level={level}
+          level={boardLevel}
           gameName="Card Matching"
           synced={synced}
           offline={offline}
-          onPlayAgain={initializeGame}
+          onPlayAgain={() => {
+            setBoardLevel(dda.level);
+            initializeGame(dda.level);
+          }}
         />
       </>
     );
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-4 justify-center text-sm font-bold text-cream/80">
-        <span>
-          Moves: <span className="text-sun">{moves}</span>
-        </span>
-        <span>
-          Matched:{" "}
-          <span className="text-tea-confirm">
-            {matches}/{pairCount}
+      {/* Top Controls: Adaptive Pacing Badge + Move Counters */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-clay/40">
+        <AdaptivePacingBadge
+          isAdaptiveActive={dda.isAdaptiveActive}
+          onToggle={dda.toggleAdaptive}
+          adjustment={dda.adjustment}
+        />
+
+        <div className="flex items-center gap-3">
+          <span className="px-2.5 py-1 rounded-full border border-sun/40 bg-sun/10 text-sun font-bold text-xs sm:text-sm">
+            Level {boardLevel}
           </span>
-        </span>
+          <div className="flex gap-4 text-sm font-bold text-cream/80">
+            <span>
+              Moves: <span className="text-sun">{moves}</span>
+            </span>
+            <span>
+              Matched:{" "}
+              <span className="text-tea-confirm">
+                {matches}/{pairCount}
+              </span>
+            </span>
+          </div>
+        </div>
       </div>
+
+      {/* Gentle Assistance Cue when struggling or hesitating */}
+      {dda.showAssistanceCue && (
+        <div className="px-4 py-2 rounded-xl bg-sun/10 border border-sun/40 text-sun text-xs font-bold text-center animate-pulse flex items-center justify-center gap-2">
+          <span>💡 Adaptive Assistance: Look closely at matching symbols. Take your time!</span>
+        </div>
+      )}
 
       <div
         className="grid gap-2"
