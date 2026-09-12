@@ -144,11 +144,14 @@ export function VoiceAssistantModal({
         }
       }}
     >
-      <div className="relative w-full max-w-xl rounded-3xl border border-clay bg-surface p-6 sm:p-8 shadow-card space-y-6 text-cream">
+      <div className="relative w-full max-w-xl rounded-3xl border border-clay/80 bg-surface p-6 sm:p-8 shadow-card space-y-6 text-cream overflow-hidden">
+        {/* North Eastern Cultural Accent Top Strip */}
+        <div className="border-cultural-strip -mx-6 sm:-mx-8 -mt-6 sm:-mt-8 mb-6" />
+
         {/* Header */}
         <div className="flex items-center justify-between border-b border-clay/60 pb-4">
           <div className="flex items-center gap-3">
-            <span className="flex size-11 items-center justify-center rounded-2xl bg-sun text-ink shadow-sm">
+            <span className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-sun via-amber-400 to-fire text-ink shadow-sm shrink-0">
               <Sparkles size={24} />
             </span>
             <div>
@@ -156,7 +159,7 @@ export function VoiceAssistantModal({
                 SmritiSetu Voice Assistant
               </h2>
               <p className="text-xs text-cream/70">
-                Natural multilingual speech navigation for elderly companion care
+                AI speech companion supporting Assamese, Hindi, Bengali & English
               </p>
             </div>
           </div>

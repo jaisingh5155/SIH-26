@@ -4,6 +4,7 @@ import { House, ArrowRight, User, Stethoscope, Users, LogIn, AlertCircle } from 
 import { useAuth } from "../hooks/use-auth";
 import { formatApiError } from "../api/client";
 import { BackendStatusBanner } from "../components/backend-status-banner";
+import { SmritiSetuLogo } from "../components/SmritiSetuLogo";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -11,8 +12,8 @@ import { Label } from "../components/ui/label";
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Sign In | CuCove" },
-      { name: "description", content: "Sign in to CuCove cognitive companion platform." },
+      { title: "Sign In | SmritiSetu" },
+      { name: "description", content: "Sign in to SmritiSetu cognitive companion platform." },
     ],
   }),
   component: LoginPage,
@@ -53,28 +54,26 @@ function LoginPage() {
         navigate({ to: "/" });
       }
     } catch (err: unknown) {
-      setErrorMessage(formatApiError(err, "Invalid email or password. Please try again."));
+      setErrorMessage(formatApiError(err, "Sign in failed. Check your credentials."));
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDemo = async (role: "patient" | "caretaker" | "doctor") => {
-    setErrorMessage(null);
     setIsLoading(true);
+    setErrorMessage(null);
     try {
-      const user = await demoLogin(role);
-      if (user.role === "caretaker") {
+      await demoLogin(role);
+      if (role === "caretaker") {
         navigate({ to: "/caregiver" });
-      } else if (user.role === "doctor") {
+      } else if (role === "doctor") {
         navigate({ to: "/doctor" });
       } else {
         navigate({ to: "/" });
       }
     } catch (err: unknown) {
-      setErrorMessage(
-        formatApiError(err, "Demo sign-in failed. Please verify the backend server is active."),
-      );
+      setErrorMessage(formatApiError(err, "Failed to load demo profile"));
     } finally {
       setIsLoading(false);
     }
@@ -84,14 +83,19 @@ function LoginPage() {
     <div className="min-h-screen bg-background text-foreground flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <BackendStatusBanner />
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <Link to="/" className="inline-flex items-center gap-3">
-          <span className="flex size-14 items-center justify-center rounded-xl bg-sun text-ink shadow-md">
-            <House size={32} strokeWidth={2.5} />
-          </span>
-          <span className="font-display text-4xl font-bold text-cream">CuCove</span>
+        <Link to="/" className="inline-flex items-center gap-3.5 group">
+          <SmritiSetuLogo size={56} showGlow={true} className="group-hover:scale-105 transition-transform" />
+          <div className="text-left">
+            <span className="font-display text-3xl sm:text-4xl font-bold text-cream block leading-tight group-hover:text-sun transition-colors">
+              SmritiSetu
+            </span>
+            <span className="text-xs text-sun font-bold uppercase tracking-wider">
+              স্মৃতি সেতু · Cognitive Companion
+            </span>
+          </div>
         </Link>
-        <h1 className="mt-6 text-3xl font-bold tracking-tight text-cream">Welcome Back</h1>
-        <p className="mt-2 text-base text-cream/70">
+        <h1 className="mt-6 text-2xl sm:text-3xl font-bold tracking-tight text-cream">Welcome Back</h1>
+        <p className="mt-1.5 text-sm sm:text-base text-cream/70">
           Sign in to access your daily companion, medicine, and care plans.
         </p>
       </div>

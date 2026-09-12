@@ -28,8 +28,8 @@ export function Sidebar() {
             🧠
           </div>
           <div>
-            <h1 className="text-base font-bold text-ink">NER-MemoryCare</h1>
-            <p className="text-xs text-ink/60">Caregiver Portal</p>
+            <h1 className="text-base font-bold text-ink">SmritiSetu</h1>
+            <p className="text-xs text-ink/60">স্মৃতি সেতু · Caregiver Portal</p>
           </div>
         </div>
       </div>

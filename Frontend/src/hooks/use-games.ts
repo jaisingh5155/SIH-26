@@ -30,7 +30,7 @@ export function useGames(customPatientId?: string) {
     mutationFn: (data: GameSessionCreate) =>
       gamesApi.submitGameSession({
         ...data,
-        patient_id: data.patient_id || patientId,
+        patient_id: data.patient_id || patientId || "p1",
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["games", "summary", patientId] });

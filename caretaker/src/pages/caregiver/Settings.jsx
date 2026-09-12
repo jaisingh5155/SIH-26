@@ -134,10 +134,10 @@ export default function Settings() {
         {/* About Card */}
         <Card className="shadow-sm">
           <h3 className="font-bold text-ink mb-3 text-base flex items-center gap-2">
-            <Info className="w-5 h-5 text-tea-confirm" /> About NER-MemoryCare
+            <Info className="w-5 h-5 text-tea-confirm" /> About SmritiSetu (স্মৃতি সেতু)
           </h3>
           <p className="text-xs text-ink/70 leading-relaxed">
-            NER-MemoryCare is a localized cognitive assistance and monitoring platform for elderly dementia patients and their caregivers in the North Eastern Region.
+            SmritiSetu is an AI-powered cognitive assistance and elder monitoring platform tailored for North Eastern India, supporting families, caregivers, and elders with dementia and memory loss.
           </p>
           <p className="text-xs text-ink/50 mt-3 font-medium">Version 1.0.0 (SIH-26003)</p>
         </Card>

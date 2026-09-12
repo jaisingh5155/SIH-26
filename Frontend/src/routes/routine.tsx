@@ -26,15 +26,16 @@ import {
 } from "@/components/ui/dialog";
 import { useTasks } from "@/hooks/use-tasks";
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslation } from "@/i18n/i18nContext";
 import type { TaskPriority } from "@/types/api";
 
 export const Route = createFileRoute("/routine")({
   head: () => ({
     meta: [
-      { title: "Daily Routine | CuCove" },
+      { title: "Daily Routine | SmritiSetu" },
       {
         name: "description",
-        content: "Reassuring, structured daily activities and reminders on CuCove.",
+        content: "Reassuring, structured daily activities and reminders on SmritiSetu.",
       },
     ],
   }),
@@ -43,7 +44,8 @@ export const Route = createFileRoute("/routine")({
 
 function RoutinePage() {
   const { user } = useAuth();
-  const { todayTasks, completeTask, createTask, deleteTask, isLoading } = useTasks();
+  const { t } = useTranslation();
+  const { tasks, todayTasks, createTask, completeTask, deleteTask, isLoading } = useTasks();
   const [filter, setFilter] = useState<"all" | "pending" | "completed">("all");
 
   // Add Task Modal State
@@ -51,7 +53,7 @@ function RoutinePage() {
   const [title, setTitle] = useState("");
   const [scheduledTime, setScheduledTime] = useState("10:00");
   const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState<TaskPriority>("normal");
+  const [priority, setPriority] = useState<TaskPriority>("medium");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const filteredTasks = todayTasks.filter((t) => {
@@ -60,11 +62,11 @@ function RoutinePage() {
     return true;
   });
 
-  const handleToggle = async (taskId: string) => {
+  const handleToggleTask = async (taskId: string) => {
     try {
       await completeTask(taskId);
     } catch (err: unknown) {
-      toast.error(formatApiError(err, "Failed to update task"));
+      toast.error(formatApiError(err, "Failed to update activity"));
     }
   };
 
@@ -85,7 +87,7 @@ function RoutinePage() {
         scheduled_time: scheduledTime.length === 5 ? `${scheduledTime}:00` : scheduledTime,
         priority,
         recurrence: "daily",
-        start_date: new Date().toISOString().split("T")[0],
+        start_date: new Date().toISOString().split("T")[0] ?? "",
       });
       toast.success("New routine activity added!");
       setIsAddOpen(false);
@@ -116,7 +118,7 @@ function RoutinePage() {
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <Button asChild variant="cream" size="touch">
             <Link to="/">
-              <ArrowLeft size={20} className="mr-2" /> Back Home
+              <ArrowLeft size={20} className="mr-2" /> {t("common.backHome")}
             </Link>
           </Button>
 
@@ -124,20 +126,20 @@ function RoutinePage() {
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
               <Button variant="cream" size="touch" className="text-base font-extrabold">
-                <Plus size={20} className="mr-2" /> ADD ACTIVITY
+                <Plus size={20} className="mr-2" /> {t("routine.addActivity").toUpperCase()}
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-surface border-clay text-cream max-w-md">
               <DialogHeader>
                 <DialogTitle className="font-display text-2xl font-bold text-cream">
-                  Add Daily Activity
+                  {t("routine.addActivity")}
                 </DialogTitle>
               </DialogHeader>
 
               <form onSubmit={handleCreateTask} className="space-y-4 mt-4">
                 <div>
                   <Label htmlFor="task-title" className="text-sm font-bold text-cream">
-                    Activity Name
+                    {t("routine.activityName")}
                   </Label>
                   <Input
                     id="task-title"
@@ -151,7 +153,7 @@ function RoutinePage() {
 
                 <div>
                   <Label htmlFor="task-time" className="text-sm font-bold text-cream">
-                    Scheduled Time
+                    {t("routine.scheduledTime")}
                   </Label>
                   <Input
                     id="task-time"

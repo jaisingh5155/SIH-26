@@ -50,6 +50,7 @@ export default function WorkingMemoryGrid({ level }: { level: number }) {
   const toggleCell = (idx: number) => {
     if (phase !== "recall") return;
     setSelected((prev) => {
+      const next = new Set(prev);
       if (next.has(idx)) {
         next.delete(idx);
       } else {

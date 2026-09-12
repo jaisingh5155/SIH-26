@@ -14,16 +14,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { useTranslation } from "@/i18n/i18nContext";
 import memoryPhotos from "@/assets/memory-triptych.jpg";
 import profilePhoto from "@/assets/profile-lalita.jpg";
 
 export const Route = createFileRoute("/memories")({
   head: () => ({
     meta: [
-      { title: "My Memories | CuCove" },
+      { title: "My Memories | SmritiSetu" },
       {
         name: "description",
-        content: "Familiar people, places, and personal life stories on CuCove.",
+        content: "Familiar people, places, and personal life stories on SmritiSetu.",
       },
     ],
   }),
@@ -77,6 +78,7 @@ const INITIAL_MEMORIES: MemoryItem[] = [
 ];
 
 function MemoriesPage() {
+  const { t } = useTranslation();
   const [memories, setMemories] = useState<MemoryItem[]>(INITIAL_MEMORIES);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -126,7 +128,7 @@ function MemoriesPage() {
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <Button asChild variant="cream" size="touch">
             <Link to="/">
-              <ArrowLeft size={20} className="mr-2" /> Back Home
+              <ArrowLeft size={20} className="mr-2" /> {t("common.backHome")}
             </Link>
           </Button>
 
@@ -134,13 +136,13 @@ function MemoriesPage() {
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
               <Button variant="cream" size="touch" className="text-base font-extrabold">
-                <Plus size={20} className="mr-2" /> ADD MEMORY
+                <Plus size={20} className="mr-2" /> {t("memories.addMemory").toUpperCase()}
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-surface border-clay text-cream max-w-md">
               <DialogHeader>
                 <DialogTitle className="font-display text-2xl font-bold text-cream">
-                  Add a Family Memory
+                  {t("memories.addMemory")}
                 </DialogTitle>
               </DialogHeader>
 
@@ -201,10 +203,10 @@ function MemoriesPage() {
                     onClick={() => setIsAddOpen(false)}
                     className="border border-clay text-cream"
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                   <Button type="submit" variant="cream">
-                    Save to Album
+                    {t("common.save")}
                   </Button>
                 </div>
               </form>
@@ -220,10 +222,10 @@ function MemoriesPage() {
             </span>
             <div>
               <h1 className="font-display text-3xl sm:text-4xl font-bold text-cream">
-                My Memories & Familiar Faces
+                {t("memories.title")}
               </h1>
               <p className="text-cream/80 mt-1">
-                Reminiscence strengthens emotional stability and grounds memory in affection.
+                {t("memories.subtitle")}
               </p>
             </div>
           </div>
@@ -262,7 +264,7 @@ function MemoriesPage() {
                   onClick={() => handleSpeak(m.voicePrompt)}
                   className="w-full text-base font-extrabold gap-2 mt-4"
                 >
-                  <Volume2 size={20} /> LISTEN TO STORY
+                  <Volume2 size={20} /> {t("memories.listenMemory").toUpperCase()}
                 </Button>
               </div>
             </article>

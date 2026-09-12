@@ -17,6 +17,7 @@ import { doctorsApi } from "@/api/doctors.api";
 import { prescriptionsApi } from "@/api/prescriptions.api";
 import { useAuth } from "@/hooks/use-auth";
 import { NavigationHeader } from "@/components/navigation-header";
+import { useTranslation } from "@/i18n/i18nContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,7 +32,7 @@ import {
 export const Route = createFileRoute("/doctor")({
   head: () => ({
     meta: [
-      { title: "Doctor Portal | CuCove" },
+      { title: "Doctor Portal | SmritiSetu" },
       {
         name: "description",
         content: "Doctor clinical dashboard for managing prescriptions and cognitive evaluations.",
@@ -44,6 +45,7 @@ export const Route = createFileRoute("/doctor")({
 function DoctorPage() {
   const queryClient = useQueryClient();
   const { user, isAuthenticated, demoLogin } = useAuth();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!isAuthenticated || user?.role !== "doctor") {
@@ -88,9 +90,11 @@ function DoctorPage() {
 
   const handleCreatePrescription = async (e: React.FormEvent) => {
     e.preventDefault();
-    const patientId = selectedPatientId || dashboard?.patients[0]?.patient.id;
+    if (!medicineName.trim()) return;
+
+    const patientId = selectedPatientId || dashboard?.patients[0]?.id;
     if (!patientId) {
-      toast.error("No patient selected");
+      toast.error("Please select a patient.");
       return;
     }
 
@@ -102,7 +106,7 @@ function DoctorPage() {
         dosage: dosage.trim(),
         route: "Oral",
         instructions: instructions.trim(),
-        start_date: new Date().toISOString().split("T")[0],
+        start_date: new Date().toISOString().split("T")[0] ?? "",
       });
     } finally {
       setIsSubmittingRx(false);
@@ -117,7 +121,7 @@ function DoctorPage() {
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <Button asChild variant="cream" size="touch">
             <Link to="/">
-              <ArrowLeft size={20} className="mr-2" /> Back to Patient View
+              <ArrowLeft size={20} className="mr-2" /> {t("common.backHome")}
             </Link>
           </Button>
 
@@ -125,20 +129,20 @@ function DoctorPage() {
           <Dialog open={isRxOpen} onOpenChange={setIsRxOpen}>
             <DialogTrigger asChild>
               <Button variant="cream" size="touch" className="text-base font-extrabold gap-2">
-                <Plus size={20} /> WRITE PRESCRIPTION
+                <Plus size={20} /> {t("doctor.newPrescription").toUpperCase()}
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-surface border-clay text-cream max-w-md">
               <DialogHeader>
                 <DialogTitle className="font-display text-2xl font-bold text-cream">
-                  Issue Clinical Prescription
+                  {t("doctor.newPrescription")}
                 </DialogTitle>
               </DialogHeader>
 
               <form onSubmit={handleCreatePrescription} className="space-y-4 mt-4">
                 <div>
                   <Label htmlFor="rx-med" className="text-sm font-bold text-cream">
-                    Medicine Name
+                    {t("doctor.medicineName")}
                   </Label>
                   <Input
                     id="rx-med"

@@ -43,6 +43,7 @@ export default function PatternMatrix({ level }: { level: number }) {
   const toggle = (idx: number) => {
     if (phase !== "recreate") return;
     setAttempt((prev) => {
+      const next = new Set(prev);
       if (next.has(idx)) {
         next.delete(idx);
       } else {

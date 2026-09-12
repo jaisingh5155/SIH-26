@@ -21,10 +21,10 @@ import type { MedicationLogStatus } from "@/types/api";
 export const Route = createFileRoute("/medication")({
   head: () => ({
     meta: [
-      { title: "Medication & Reminders | CuCove" },
+      { title: "Medication & Reminders | SmritiSetu" },
       {
         name: "description",
-        content: "Clear daily medication schedules and dosage logs on CuCove.",
+        content: "Clear daily medication schedules and dosage logs on SmritiSetu.",
       },
     ],
   }),
@@ -32,9 +32,11 @@ export const Route = createFileRoute("/medication")({
 });
 
 import { formatApiError } from "../api/client";
+import { useTranslation } from "@/i18n/i18nContext";
 
 function MedicationPage() {
   const { todaySchedules, todayLogs, prescriptions, updateLogStatus, isLoading } = useMedications();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"today" | "prescriptions">("today");
 
   const totalLogs = todayLogs.length || 1;
@@ -60,53 +62,58 @@ function MedicationPage() {
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <NavigationHeader />
 
-      <main className="flex-1 mx-auto max-w-5xl px-5 py-8 sm:px-8 sm:py-12 w-full">
+      <main className="flex-1 mx-auto max-w-5xl px-4 py-8 sm:px-8 sm:py-10 w-full space-y-8">
         {/* Navigation Breadcrumb */}
-        <div className="flex items-center justify-between gap-4 mb-8">
-          <Button asChild variant="cream" size="touch">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <Button asChild variant="cream" size="touch" className="rounded-2xl shadow-sm">
             <Link to="/">
-              <ArrowLeft size={20} className="mr-2" /> Back Home
+              <ArrowLeft size={20} className="mr-2" /> {t("common.backHome")}
             </Link>
           </Button>
 
           {/* Tab Selector */}
-          <div className="flex items-center gap-2 bg-surface p-1.5 rounded-xl border border-clay">
+          <div className="flex items-center gap-1.5 bg-surface p-1.5 rounded-2xl border border-clay/60 shadow-sm">
             <button
               type="button"
               onClick={() => setActiveTab("today")}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition ${
-                activeTab === "today" ? "bg-sun text-ink shadow-sm" : "text-cream hover:bg-clay"
+              className={`px-5 py-2.5 rounded-xl text-sm font-extrabold transition cursor-pointer ${
+                activeTab === "today" ? "bg-sun text-ink shadow-sm" : "text-cream/80 hover:bg-clay/40"
               }`}
             >
-              Today’s Doses
+              {t("medication.todaysDoses")}
             </button>
             <button
               type="button"
               onClick={() => setActiveTab("prescriptions")}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition ${
+              className={`px-5 py-2.5 rounded-xl text-sm font-extrabold transition cursor-pointer ${
                 activeTab === "prescriptions"
                   ? "bg-sun text-ink shadow-sm"
-                  : "text-cream hover:bg-clay"
+                  : "text-cream/80 hover:bg-clay/40"
               }`}
             >
-              Doctor’s Prescriptions ({prescriptions.length})
+              {t("medication.prescriptions")} ({prescriptions.length})
             </button>
           </div>
         </div>
 
-        {/* Page Header & Adherence Card */}
-        <div className="rounded-2xl border border-clay bg-surface p-6 sm:p-8 shadow-card mb-8">
-          <div className="flex flex-wrap items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <span className="flex size-16 items-center justify-center rounded-2xl bg-fire text-ink shadow-sm">
-                <Pill size={36} />
+        {/* Page Header & Adherence Card with Cultural Accents */}
+        <div className="relative overflow-hidden rounded-3xl border border-clay/60 bg-gradient-to-br from-surface via-[#2B2319] to-surface p-6 sm:p-10 shadow-card">
+          <div className="absolute inset-0 pattern-northeast-weave opacity-30 pointer-events-none" />
+
+          <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+            <div className="flex items-center gap-5">
+              <span className="flex size-16 sm:size-20 items-center justify-center rounded-2xl bg-gradient-to-br from-fire via-[#E57A3A] to-sun text-ink shadow-md shrink-0">
+                <Pill size={38} />
               </span>
-              <div>
-                <h1 className="font-display text-3xl sm:text-4xl font-bold text-cream">
-                  Daily Medicine Schedule
+              <div className="space-y-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-sun">
+                  {t("common.appName")} · {t("navigation.medication")}
+                </span>
+                <h1 className="font-display text-3xl sm:text-4xl font-bold text-cream tracking-tight">
+                  {t("medication.title")}
                 </h1>
-                <p className="text-cream/80 mt-1">
-                  Keep track of daily doses, timings, and doctor prescriptions.
+                <p className="text-cream/80 text-sm sm:text-base font-medium">
+                  {t("medication.subtitle")}
                 </p>
               </div>
             </div>
@@ -114,12 +121,12 @@ function MedicationPage() {
             {/* Adherence progress badge */}
             <div className="w-full sm:w-64 bg-ink/70 border border-clay p-4 rounded-xl">
               <div className="flex justify-between text-sm font-bold text-cream mb-2">
-                <span>Today’s Adherence</span>
+                <span>{t("medication.adherenceRate")}</span>
                 <span className="text-sun">{adherence}%</span>
               </div>
               <Progress value={adherence} className="h-3 bg-clay [&>div]:bg-tea-confirm" />
               <p className="mt-2 text-xs text-cream/70 text-right">
-                {takenCount} of {todayLogs.length} taken
+                {takenCount} / {todayLogs.length} {t("common.completed").toLowerCase()}
               </p>
             </div>
           </div>

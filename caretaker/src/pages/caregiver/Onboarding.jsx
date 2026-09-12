@@ -16,7 +16,7 @@ export default function Onboarding() {
           <div className="w-14 h-14 bg-fire text-white rounded-2xl flex items-center justify-center text-2xl mx-auto shadow-md">
             🧠
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold text-ink">Welcome to NER-MemoryCare</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-ink">Welcome to SmritiSetu (স্মৃতি সেতু)</h1>
           <p className="text-sm text-ink/70 max-w-md mx-auto">
             Please complete this short baseline assessment to help calibrate games and activities for the patient.
           </p>

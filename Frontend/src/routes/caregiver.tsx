@@ -24,10 +24,10 @@ import { getPatient, hasCustomPatient, clearPatient } from "@/utils/patientStore
 export const Route = createFileRoute("/caregiver")({
   head: () => ({
     meta: [
-      { title: "Caregiver Hub | CuCove" },
+      { title: "Caregiver Hub | SmritiSetu" },
       {
         name: "description",
-        content: "Caregiver dashboard for monitoring patient routines, meds, and cognitive health.",
+        content: "Caregiver dashboard for monitoring patient routines, meds, and cognitive health on SmritiSetu.",
       },
     ],
   }),
@@ -35,9 +35,11 @@ export const Route = createFileRoute("/caregiver")({
 });
 
 import { formatApiError } from "@/api/client";
+import { useTranslation } from "@/i18n/i18nContext";
 
 function CaregiverPage() {
   const { user, isAuthenticated, demoLogin } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const localPatient = getPatient();
 
@@ -67,12 +69,12 @@ function CaregiverPage() {
         <div className="flex items-center justify-between gap-4 mb-8">
           <Button asChild variant="cream" size="touch">
             <Link to="/">
-              <ArrowLeft size={20} className="mr-2" /> Back to Patient View
+              <ArrowLeft size={20} className="mr-2" /> {t("common.backHome")}
             </Link>
           </Button>
 
           <span className="px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-tea-confirm/30 text-tea-confirm border border-tea-confirm">
-            Caregiver Clinical Portal
+            {t("navigation.caregiver")}
           </span>
         </div>
 
@@ -84,10 +86,10 @@ function CaregiverPage() {
             </span>
             <div>
               <h1 className="font-display text-3xl sm:text-4xl font-bold text-cream">
-                Caregiver Companion Hub
+                {t("caregiver.title")}
               </h1>
               <p className="text-cream/80 mt-1">
-                Active overview for {user?.name || "Rahul Verma"} · Monitoring assigned patients.
+                {t("caregiver.subtitle")}
               </p>
             </div>
           </div>

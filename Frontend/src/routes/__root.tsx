@@ -87,16 +87,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "CuCove" },
+      { title: "SmritiSetu | Bridging Memories, Empowering Lives" },
       {
         name: "description",
-        content: "A warm daily companion for memories, medicine, and routines.",
+        content: "SmritiSetu: Cognitive assistance, multilingual voice, and elder care companion for North Eastern India.",
       },
-      { name: "author", content: "CuCove" },
-      { property: "og:title", content: "CuCove" },
+      { name: "author", content: "SmritiSetu" },
+      { property: "og:title", content: "SmritiSetu | Bridging Memories, Empowering Lives" },
       {
         property: "og:description",
-        content: "A warm daily companion for memories, medicine, and routines.",
+        content: "SmritiSetu: Cognitive assistance, multilingual voice, and elder care companion for North Eastern India.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -137,6 +137,7 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 import { AuthProvider } from "../context/auth-context";
+import { I18nProvider } from "../i18n/i18nContext";
 import { Toaster } from "../components/ui/sonner";
 import { VoiceTriggerButton } from "@/features/voice/components/VoiceTriggerButton";
 
@@ -146,10 +147,12 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <BackendStatusBanner />
-        <Outlet />
-        <VoiceTriggerButton />
-        <Toaster position="bottom-right" />
+        <I18nProvider>
+          <BackendStatusBanner />
+          <Outlet />
+          <VoiceTriggerButton />
+          <Toaster position="bottom-right" />
+        </I18nProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

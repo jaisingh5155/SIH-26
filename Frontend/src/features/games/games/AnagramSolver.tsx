@@ -91,8 +91,8 @@ const getPool = (level: number) => {
 
 export default function AnagramSolver({ level }: { level: number }) {
   const pool = getPool(level);
-  const [word, setWord] = useState(() => pool[Math.floor(Math.random() * pool.length)]!);
-  const [scr, setScr] = useState(() => scramble(pool[Math.floor(Math.random() * pool.length)]!));
+  const [word, setWord] = useState(() => pool[Math.floor(Math.random() * pool.length)] || "cat");
+  const [scr, setScr] = useState(() => scramble(word));
   const [input, setInput] = useState("");
   const [score, setScore] = useState(0);
   const [feedback, setFeedback] = useState("");

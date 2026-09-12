@@ -17,15 +17,16 @@ import { NavigationHeader } from "@/components/navigation-header";
 import { Button } from "@/components/ui/button";
 import { useAnalytics } from "@/hooks/use-analytics";
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslation } from "@/i18n/i18nContext";
 
 export const Route = createFileRoute("/analytics")({
   head: () => ({
     meta: [
-      { title: "AI Cognitive Analytics | CuCove" },
+      { title: "AI Cognitive Analytics | SmritiSetu" },
       {
         name: "description",
         content:
-          "Cognitive assessment trends, risk evaluations, and AI clinical insights on CuCove.",
+          "Cognitive assessment trends, risk evaluations, and AI clinical insights on SmritiSetu.",
       },
     ],
   }),
@@ -34,6 +35,7 @@ export const Route = createFileRoute("/analytics")({
 
 function AnalyticsPage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const { latestAssessment, trends, isLoading, isAssessing, triggerAssessment } = useAnalytics();
 
   const handleRunAssessment = async () => {
@@ -48,10 +50,10 @@ function AnalyticsPage() {
   };
 
   const domainData = [
-    { domain: "Memory", score: latestAssessment?.memory_score ?? 84 },
-    { domain: "Attention", score: latestAssessment?.attention_score ?? 81 },
-    { domain: "Executive", score: latestAssessment?.executive_function_score ?? 80 },
-    { domain: "Language", score: latestAssessment?.language_score ?? 85 },
+    { domain: t("analytics.memoryDomain"), score: latestAssessment?.memory_score ?? 84 },
+    { domain: t("analytics.attentionDomain"), score: latestAssessment?.attention_score ?? 81 },
+    { domain: t("analytics.executiveDomain"), score: latestAssessment?.executive_function_score ?? 80 },
+    { domain: t("analytics.languageDomain"), score: latestAssessment?.language_score ?? 85 },
   ];
 
   const riskLevel = latestAssessment?.risk_level ?? "low";
@@ -60,12 +62,12 @@ function AnalyticsPage() {
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <NavigationHeader />
 
-      <main className="flex-1 mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-12 w-full">
+      <main className="flex-1 mx-auto max-w-6xl px-4 py-8 sm:px-8 sm:py-10 w-full space-y-8">
         {/* Navigation Breadcrumb */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-          <Button asChild variant="cream" size="touch">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <Button asChild variant="cream" size="touch" className="rounded-2xl shadow-sm">
             <Link to="/">
-              <ArrowLeft size={20} className="mr-2" /> Back Home
+              <ArrowLeft size={20} className="mr-2" /> {t("common.backHome")}
             </Link>
           </Button>
 
@@ -75,25 +77,30 @@ function AnalyticsPage() {
             size="touch"
             disabled={isAssessing}
             onClick={handleRunAssessment}
-            className="text-base font-extrabold gap-2"
+            className="text-base font-extrabold gap-2 rounded-2xl shadow-md cursor-pointer hover:scale-105 active:scale-95 transition"
           >
             <RotateCw size={18} className={isAssessing ? "animate-spin" : ""} />
-            {isAssessing ? "EVALUATING AI MODEL…" : "RUN AI ASSESSMENT NOW"}
+            {isAssessing ? "EVALUATING AI MODEL…" : t("analytics.runAssessment").toUpperCase()}
           </Button>
         </div>
 
-        {/* Page Title Card */}
-        <div className="rounded-2xl border border-clay bg-surface p-6 sm:p-8 shadow-card mb-8">
-          <div className="flex items-center gap-4">
-            <span className="flex size-16 items-center justify-center rounded-2xl bg-sun text-ink shadow-sm">
-              <BarChart3 size={36} />
+        {/* Page Title Card with Cultural Accents */}
+        <div className="relative overflow-hidden rounded-3xl border border-clay/60 bg-gradient-to-br from-surface via-[#2B2319] to-surface p-6 sm:p-10 shadow-card">
+          <div className="absolute inset-0 pattern-northeast-weave opacity-30 pointer-events-none" />
+
+          <div className="relative z-10 flex items-center gap-5">
+            <span className="flex size-16 sm:size-20 items-center justify-center rounded-2xl bg-gradient-to-br from-sun via-amber-400 to-fire text-ink shadow-md shrink-0">
+              <BarChart3 size={38} />
             </span>
-            <div>
-              <h1 className="font-display text-3xl sm:text-4xl font-bold text-cream">
-                Cognitive Performance & AI Analytics
+            <div className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-sun">
+                {t("common.appName")} · {t("navigation.analytics")}
+              </span>
+              <h1 className="font-display text-3xl sm:text-4xl font-bold text-cream tracking-tight">
+                {t("analytics.title")}
               </h1>
-              <p className="text-cream/80 mt-1">
-                Real-time tracking of memory retention, attention span, and routine stability.
+              <p className="text-cream/80 text-sm sm:text-base font-medium">
+                {t("analytics.subtitle")}
               </p>
             </div>
           </div>

@@ -68,6 +68,8 @@
   --color-fire: var(--fire);
   --color-tea-confirm: var(--tea-confirm);
   --color-clay: var(--clay);
+  --color-forest-teal: var(--forest-teal);
+  --color-river-mist: var(--river-mist);
   --shadow-card: 0 12px 30px color-mix(in oklab, var(--ink) 55%, transparent);
   --shadow-card-active: 0 18px 42px color-mix(in oklab, var(--ink) 72%, transparent);
   --shadow-voice:
@@ -79,14 +81,16 @@
 }
 
 :root {
-  --radius: 0.75rem;
+  --radius: 0.875rem;
   --ink: oklch(0.185 0.022 70.7);
   --surface: oklch(0.255 0.027 66.1);
-  --cream: oklch(0.929 0.041 81.7);
+  --cream: oklch(0.935 0.038 82.5);
   --sun: oklch(0.88 0.16 91.7);
   --fire: oklch(0.704 0.19 47.6);
-  --tea-confirm: oklch(0.405 0.054 148.5);
-  --clay: oklch(0.407 0.034 68.1);
+  --tea-confirm: oklch(0.48 0.075 148.5);
+  --clay: oklch(0.42 0.034 68.1);
+  --forest-teal: oklch(0.35 0.07 175);
+  --river-mist: oklch(0.72 0.08 220);
   --background: var(--ink);
   --foreground: var(--cream);
   --card: var(--surface);
@@ -218,3 +222,50 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* North Eastern Cultural Theme & Elder-Friendly UI Utilities */
+
+/* Subtle Muga Silk Handloom Geometric Pattern */
+.pattern-northeast-weave {
+  background-image: radial-gradient(circle at 1px 1px, color-mix(in oklab, var(--sun) 18%, transparent) 1px, transparent 0),
+                    linear-gradient(45deg, color-mix(in oklab, var(--fire) 6%, transparent) 25%, transparent 25%, transparent 75%, color-mix(in oklab, var(--fire) 6%, transparent) 75%);
+  background-size: 24px 24px, 48px 48px;
+}
+
+/* Subtle Top Textile Motif Border Strip */
+.border-cultural-strip {
+  background: linear-gradient(90deg, 
+    var(--sun) 0%, 
+    var(--fire) 35%, 
+    var(--tea-confirm) 70%, 
+    var(--river-mist) 100%
+  );
+  height: 4px;
+}
+
+/* Cultural Badge Accent */
+.badge-cultural {
+  background: color-mix(in oklab, var(--sun) 14%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--sun) 40%, transparent);
+  color: var(--sun);
+}
+
+/* Enhanced high-contrast focus and click feedback for elderly accessibility */
+.touch-target-accessible {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* Soft card elevation with warm ambient glow */
+.card-warm-glow {
+  box-shadow: 0 10px 28px -6px color-mix(in oklab, var(--ink) 65%, transparent),
+              0 0 0 1px color-mix(in oklab, var(--clay) 30%, transparent);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+}
+
+.card-warm-glow:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px -8px color-mix(in oklab, var(--ink) 80%, transparent),
+              0 0 0 1px color-mix(in oklab, var(--sun) 50%, transparent);
+}
+
